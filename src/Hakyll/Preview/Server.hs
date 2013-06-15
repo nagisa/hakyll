@@ -11,6 +11,9 @@ import           Control.Monad.Trans (liftIO)
 import qualified Snap.Core           as Snap
 import qualified Snap.Http.Server    as Snap
 import qualified Snap.Util.FileServe as Snap
+import qualified Data.HashMap.Strict as M
+import Data.Text as T
+import Text.HTML.TagSoup
 
 
 --------------------------------------------------------------------------------
@@ -24,7 +27,18 @@ static directory preServe =
     directoryConfig :: Snap.DirectoryConfig Snap.Snap
     directoryConfig = Snap.fancyDirectoryConfig
         { Snap.preServeHook = liftIO . preServe
+        , Snap.dynamicHandlers = M.fromList [ (".html", insertAutoReload)
+                                            , (".htm", insertAutoReload)
+                                            ]
         }
+    insertAutoReload file = do
+        file' <- liftIO $ readFile file
+        Snap.writeText . T.pack . insertScript $ file'
+    insertScript = renderTags . insertScript' . parseTags
+    insertScript' [] = []
+    insertScript' (x@(TagOpen "head" _):xs) = x:(script++xs)
+    insertScript' (x:xs) = x:(insertScript' xs)
+    script = parseTags ("<script async type=\"text/javascript\">console.log(\"Hello World\");</script>" :: String)
 
 
 --------------------------------------------------------------------------------
