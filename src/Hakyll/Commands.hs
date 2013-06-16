@@ -29,6 +29,13 @@ import           Hakyll.Core.Util.File
 #ifdef PREVIEW_SERVER
 import           Hakyll.Preview.Poll
 import           Hakyll.Preview.Server
+-- WS based autoreload
+import           Network.WebSockets.Util.PubSub
+import           Network.WebSockets
+import           Control.Concurrent (forkIO, threadDelay)
+import           Control.Monad.Trans (liftIO)
+import           Data.Text           (pack)
+import Control.Monad (forever)
 #endif
 
 
@@ -61,12 +68,19 @@ clean conf = do
 preview :: Configuration -> Verbosity -> Rules a -> Int -> IO ()
 #ifdef PREVIEW_SERVER
 preview conf verbosity rules port = do
-    watchUpdates conf update
+    pubSub <- (newPubSub :: IO (PubSub Hybi00))
+    watchUpdates conf (update pubSub)
+    forkIO $ runServer "0.0.0.0" 8001 (wsapp pubSub)
     server conf port
   where
-    update = do
+    update pub = do
         (_, ruleSet) <- run conf verbosity rules
+        publish pub $ textData (pack "Update!")
         return $ rulesPattern ruleSet
+    wsapp :: TextProtocol p => PubSub p -> Request -> WebSockets p ()
+    wsapp pub rq = do
+        acceptRequest rq
+        subscribe pub
 #else
 preview _ _ _ _ = previewServerDisabled
 #endif
