@@ -38,7 +38,14 @@ static directory preServe =
     insertScript' [] = []
     insertScript' (x@(TagOpen "head" _):xs) = x:(script++xs)
     insertScript' (x:xs) = x:(insertScript' xs)
-    script = parseTags ("<script async type=\"text/javascript\">console.log(\"Hello World\");</script>" :: String)
+    script = parseTags ("<script async type=\"text/javascript\"> \
+                        \ (function(){ \
+                        \ var ws = new WebSocket('ws://localhost:8001/'), \
+                        \ onMsg = function(evt){ \
+                        \ if(evt.data==='updated'){window.location.reload();} \
+                        \ }; \
+                        \ ws.addEventListener('message', onMsg);})(); \
+                        \ </script>" :: String)
 
 
 --------------------------------------------------------------------------------

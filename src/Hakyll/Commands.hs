@@ -75,7 +75,10 @@ preview conf verbosity rules port = do
   where
     update pub = do
         (_, ruleSet) <- run conf verbosity rules
-        publish pub $ textData (pack "Update!")
+        -- TODO: It's impossible to get list of files that were recompiled yet.
+        -- Only the list of all matched files is available, which doesn't suit
+        -- our needs here.
+        publish pub $ textData . pack $ "updated"
         return $ rulesPattern ruleSet
     wsapp :: TextProtocol p => PubSub p -> Request -> WebSockets p ()
     wsapp pub rq = do
